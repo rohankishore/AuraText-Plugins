@@ -4,7 +4,7 @@
 
 <div align="center">
 
-  <a href="[https://opensource.org/licenses/MIT](https://github.com/rohankishore/Aura-Text)">![AuraText](https://img.shields.io/badge/Aura-Text-yellow)</a>
+  <a href="https://github.com/rohankishore/Aura-Text/">![Demo](https://img.shields.io/badge/Aura-Text-orange)</a>
   <a href="https://opensource.org/">![Language](https://img.shields.io/badge/Open-Source-blue)</a>
   <a href="https://www.fiverr.com/rohancodespy/">![Demo](https://img.shields.io/badge/Fiverr-Hire-green)</a>
 </div>
