@@ -18,4 +18,5 @@
 - ```GetTheColor```  : Color Picker for Aura Text. Helps to select colours from the screen, or from an advanced colour picker. (`Tools -> GetTheColor`)
 - ```LoremIpsumGenerator```  : Generates placeholder lorem ipsum text. (`Tools -> LoremIpsumGenerator`)
 - ```TTS```  : Text to Speech. Recites whatever is on the current file you're editing. (`Tools -> TTS`)
+-  ```Base64```  : Base64 Encryption. (`Right Click -> Encryption`)
 - ```Markdown```  : Creates live previews while editing Markdown (.md) files.
