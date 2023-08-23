@@ -1,9 +1,12 @@
+# ReadAloud.py
 import sys
 
+from PyQt6.QtWidgets import QMenu
+from plugin_interface import MenuPluginInterface
+from PyQt6.QtGui import QAction
 from PyQt6.QtWidgets import QVBoxLayout, QPushButton, QLabel, QColorDialog, QWidget, QApplication, QDialog
 
-
-class GetTheColor(QDialog):
+class MainApp(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.initUI()
@@ -27,8 +30,17 @@ class GetTheColor(QDialog):
             QApplication.clipboard().setText(color.name())
             self.color_label.setStyleSheet(f"QLabel {{ background-color: {color.name()}; color: #ffffff; }}")
 
-if __name__ == "__main__":
-    app = QApplication(sys.argv)
-    dialog = GetTheColor()
-    dialog.exec()
-    sys.exit()
+class GetTheColor(MenuPluginInterface):
+    def __init__(self, text_widget):
+        super().__init__(text_widget)
+        self.section = "Tools"
+
+    def add_menu_items(self, context_menu: QMenu):
+        talk_action = QAction("GetTheColor", context_menu)
+        talk_action.triggered.connect(lambda : self.run())
+        context_menu.addAction(talk_action)
+
+    def run(self):
+        app = QApplication(sys.argv)
+        dialog = MainApp()
+        dialog.exec()
