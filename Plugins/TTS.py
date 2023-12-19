@@ -1,23 +1,54 @@
-from tkinter import messagebox
-import pyttsx3
+import sys
 import threading
 
-def rightSpeak(text):
-    if text != "":
-        engine = pyttsx3.init()
-        engine.say(text)
-        engine.runAndWait()
-    else:
-        messagebox.showerror(
-            "Text not found!",
-            "Did you forget to bring your words to the party? Don't worry, just type something "
-            "and let's get this conversation started!")
+import pyttsx3
+from PyQt6.QtGui import QKeySequence, QShortcut, QAction
+from PyQt6.QtWidgets import QMenu
+
+from auratext import Plugin
+from auratext.Core.AuraText import CodeEditor
+from auratext.Core.window import Window
+
+engine = pyttsx3.init()
 
 
-def speak(self):
-    def speak_init():
-        text = self.current_editor.text()
-        rightSpeak(text)
+class TTS(Plugin):
+    def __init__(self, window: Window) -> None:
+        super().__init__(window)
 
-    speak_thread = threading.Thread(target=speak_init)
-    speak_thread.start()
+        self.window = window
+
+        self.tts_menu = QMenu("&Speak")
+
+        self.tts_menu_item1 = QAction("Selected Text", self.window)
+        self.tts_menu_item1.triggered.connect(self.selected_text)
+        self.tts_menu.addAction(self.tts_menu_item1)
+
+        self.tts_menu_item2 = QAction("Whole Document", self.window)
+        self.tts_menu_item2.triggered.connect(self.whole_document)
+        self.tts_menu.addAction(self.tts_menu_item2)
+
+        # Add the new menu item to the CodeEditor's context menu
+        try:
+            for i in self.window.editors:
+                i.context_menu.addMenu(self.tts_menu)
+        except Exception as e:
+            print(e)
+
+    def whole_document(self):
+        def tts_run():
+            a = self.window.current_editor.text()
+            engine.say(a)
+            engine.runAndWait()
+
+        tts_thread = threading.Thread(target=tts_run)
+        tts_thread.start()
+
+    def selected_text(self):
+        def tts_run():
+            a = self.window.current_editor.selectedText()
+            engine.say(a)
+            engine.runAndWait()
+
+        tts_thread = threading.Thread(target=tts_run)
+        tts_thread.start()
