@@ -1,7 +1,7 @@
 import sys
 
 from PyQt6.QtCore import Qt, QSize
-from PyQt6.QtGui import QColor, QFont, QActionGroup, QFileSystemModel, QPixmap, QIcon, QKeySequence, QShortcut
+from PyQt6.QtGui import QColor, QFont, QActionGroup, QFileSystemModel, QPixmap, QIcon, QKeySequence, QShortcut, QAction
 from PyQt6.QtWidgets import (
     QMainWindow,
     QInputDialog,
@@ -77,11 +77,11 @@ class RoastMe(Plugin):
             lambda: self.run_rm() if self.widget.isHidden() else self.widget.hide()
         )
 
-        self.tts_menu_item = QAction("Speak Selected Text", self.window)
-        self.tts_menu_item.triggered.connect(self.run_rm)
+        self.roastme_item = QAction("Roast Me", self.window)
+        self.roastme_item.triggered.connect(self.run_rm)
 
         # Add the new menu item to the CodeEditor's context menu
-        self.window.current_editor.context_menu.addAction("Hello", self.tts_menu_item)
+        self.window.current_editor.context_menu.addAction(self.roastme_item)
 
 
     def run_rm(self):
