@@ -28,12 +28,7 @@ class TTS(Plugin):
         self.tts_menu_item2.triggered.connect(self.whole_document)
         self.tts_menu.addAction(self.tts_menu_item2)
 
-        # Add the new menu item to the CodeEditor's context menu
-        try:
-            for i in self.window.editors:
-                i.context_menu.addMenu(self.tts_menu)
-        except Exception as e:
-            print(e)
+        self.window.current_editor.context_menu.addMenu(self.tts_menu)
 
     def whole_document(self):
         def tts_run():
