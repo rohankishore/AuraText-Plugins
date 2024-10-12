@@ -3,7 +3,7 @@ import threading
 
 import pyttsx3
 from PyQt6.QtGui import QKeySequence, QShortcut, QAction, QFont, QPainter, QPen
-from PyQt6.QtWidgets import QMenu, QDialog, QLabel, QDockWidget, QWidget, QVBoxLayout
+from PyQt6.QtWidgets import QMenu, QDialog, QLabel, QDockWidget, QWidget, QVBoxLayout, QComboBox, QPushButton
 from PyQt6.QtCore import QTimer, Qt
 
 from auratext import Plugin
@@ -40,18 +40,43 @@ class PomodoroTimer(QLabel):
 class PomodoroDock(QDockWidget):
     def __init__(self, parent=None):
         super().__init__("Pomodoro Timer", parent)
+        self.setMinimumHeight(120)
         self.init_ui()
 
     def init_ui(self):
-        timer = PomodoroTimer(duration=25)  # 25-minute Pomodoro
         content_widget = QWidget()
-        layout = QVBoxLayout(content_widget)
-        layout.addWidget(timer)
-        layout.setContentsMargins(0, 0, 0, 0)
+        self.layout = QVBoxLayout(content_widget)
+
+        time_list = ["5", "10", "15", "20", "30", "45", "60"]
+        self.timer_options = QComboBox()
+        self.timer_options.addItems(time_list)
+        self.timer_options.setPlaceholderText("Timer Duration (in minutes)")
+        self.layout.addWidget(self.timer_options)
+
+        self.set_button = QPushButton("Set")
+        self.set_button.clicked.connect(self.set_event)
+        self.layout.addWidget(self.set_button)
+
+        self.layout.setContentsMargins(0, 0, 0, 0)
         self.setWidget(content_widget)
 
+    def closeEvent(self, event):
+        # Override the close event to hide the dock instead of closing it
+        event.ignore()
+        self.hide()
 
-class RoastM(Plugin):
+    def set_event(self):
+        try:
+            duration = int(self.timer_options.currentText())
+            self.timer_widget = PomodoroTimer(duration=duration)
+            self.layout.addWidget(self.timer_widget)
+            self.timer_options.hide()
+            self.set_button.hide()
+        except Exception as e:
+            print(e)
+
+
+class PomodoroPlugin(Plugin):
     def __init__(self, window: Window) -> None:
         super().__init__(window)
 
@@ -60,12 +85,11 @@ class RoastM(Plugin):
         self.me = QAction("Pomodoro Timer", self.window)
         self.me.triggered.connect(self.run_rm)
 
-        # Add the new menu item to the CodeEditor's context menu
         self.window.current_editor.context_menu.addAction(self.me)
 
     def run_rm(self):
         try:
             dock = PomodoroDock()
-            self.window.addDockWidget(Qt.DockWidgetArea.TopDockWidgetArea, dock)
+            self.window.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, dock)
         except Exception as e:
             print(e)
