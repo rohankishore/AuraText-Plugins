@@ -3,6 +3,7 @@ import platform
 import urllib.request
 import io
 import zipfile
+import gzip
 
 from PyQt6.QtCore import QTimer
 from PyQt6.QtWidgets import QMessageBox, QProgressDialog
@@ -36,6 +37,11 @@ class RustLSP(Plugin):
             url = "https://github.com/rust-lang/rust-analyzer/releases/download/2026-06-22/rust-analyzer-x86_64-pc-windows-msvc.zip"
             compression = "zip"
             filename = "rust-analyzer.exe"
+        elif platform.system() == "Linux":
+            unamed = os.uname().machine
+            url = f"https://github.com/rust-lang/rust-analyzer/releases/download/2026-06-22/rust-analyzer-{unamed}-unknown-linux-gnu.gz"
+            compression = "gz"
+            filename = "rust-analyzer"
 
         print("INFO: Downloading binary...")
         compressedData = self.download(url)
@@ -49,6 +55,10 @@ class RustLSP(Plugin):
                         break
                 else:
                     raise RuntimeError("Binary not found in ZIP")
+        elif compression == "gz":
+            binary_data = gzip.decompress(compressedData)
+        else:
+            raise RuntimeError("Invalid compression method used")
         print("INFO: Writing rust-analyzer to disk...")
         binDir = os.path.dirname(self.binaryPath)
         os.makedirs(binDir, exist_ok=True)
