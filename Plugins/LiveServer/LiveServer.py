@@ -12,6 +12,9 @@ from PyQt6.QtWidgets import QPushButton, QMessageBox
 from auratext import Plugin
 from auratext.Core.window import Window
 
+__name__ = "Live Server"
+__author__ = "Rohan Kishore"
+__readme__ = " # Live Server "
 
 class LiveReloadHandler(SimpleHTTPRequestHandler):
     """Custom HTTP handler that injects live reload script into HTML files"""
