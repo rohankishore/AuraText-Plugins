@@ -64,6 +64,9 @@ class RustLSP(Plugin):
         os.makedirs(binDir, exist_ok=True)
         with open(self.binaryPath, "wb") as f:
             f.write(binary_data)
+        if platform.system() != "Windows":
+            print("INFO: Making language server executable...")
+            os.chmod(self.binaryPath, 0o755)
 
         print("INFO: Registering rust-analyzer into global LSP dictionary...")
         self.window.registerLSPDictEntry("rust", self.binaryPath)
