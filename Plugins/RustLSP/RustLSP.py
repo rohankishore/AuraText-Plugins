@@ -42,6 +42,14 @@ class RustLSP(Plugin):
             url = f"https://github.com/rust-lang/rust-analyzer/releases/download/2026-06-22/rust-analyzer-{unamed}-unknown-linux-gnu.gz"
             compression = "gz"
             filename = "rust-analyzer"
+        elif platform.system() == "Darwin":
+            unamed = os.uname().machine
+            if unamed == 'arm64':
+                # small hack to make rust target triple match
+                unamed = 'aarch64'
+            url = f"https://github.com/rust-lang/rust-analyzer/releases/download/2026-06-22/rust-analyzer-{unamed}-apple-darwin.gz"
+            compression = "gz"
+            filename = "rust-analyzer"
 
         print("INFO: Downloading binary...")
         compressedData = self.download(url)
