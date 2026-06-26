@@ -50,6 +50,8 @@ class RustLSP(Plugin):
             url = f"https://github.com/rust-lang/rust-analyzer/releases/download/2026-06-22/rust-analyzer-{unamed}-apple-darwin.gz"
             compression = "gz"
             filename = "rust-analyzer"
+        else:
+            raise RuntimeError("Rust LSP is not supported on this system.")
 
         print("INFO: Downloading binary...")
         compressedData = self.download(url)
