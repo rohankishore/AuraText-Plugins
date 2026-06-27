@@ -2,8 +2,6 @@
 
 String+ provides a collection of tools for transforming and manipulating text directly within Aura Text. Perform common string operations without leaving the editor.
 
-<br>
-
 ## Features
 
 - Convert text to uppercase, lowercase, title case, and camel case
@@ -11,5 +9,3 @@ String+ provides a collection of tools for transforming and manipulating text di
 - Sort, reverse, and shuffle lines
 - Encode and decode Base64 and URL strings
 - Find and replace using regular expressions
-
-<br>

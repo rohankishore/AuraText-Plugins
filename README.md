@@ -9,11 +9,7 @@
   <a href="https://www.fiverr.com/rohancodespy/">![Demo](https://img.shields.io/badge/Fiverr-Hire-green)</a>
 </div>
 
-<br>
-
 <h1 align="center">Plugins List</h1>
-
-<br>
 
 - ```GetTheColor```  : Color Picker for Aura Text. Helps to select colours from the screen, or from an advanced colour picker. (`Tools -> GetTheColor`)
 - ```LoremIpsumGenerator```  : Generates placeholder lorem ipsum text. (`Tools -> LoremIpsumGenerator`)
