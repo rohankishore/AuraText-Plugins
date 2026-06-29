@@ -301,7 +301,7 @@ class Plotter(Plugin):
 
 class PlotDockWidget(QDockWidget):
     def __init__(self, parent_window, eq, parent_plugin):
-        super().__init__("Math Equation Plotter", parent_window)
+        super().__init__("Plotter", parent_window)
         self.window = parent_window
         self.plugin = parent_plugin
         self.eq = eq
