@@ -34,10 +34,7 @@ class Plotter(Plugin):
         self.is_running = False
         self.port = 5500
         self.watcher = None
-        
-        # Check if button already exists (prevent duplicates)
-        if hasattr(self.window, '_live_server_button'):
-            return
+    
         
         # Create "Go Live" button in status bar
         self.plot_action = QAction("Plot Expression")
