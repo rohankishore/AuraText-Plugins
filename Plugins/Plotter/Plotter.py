@@ -40,7 +40,8 @@ class Plotter(Plugin):
         self.detected_equations = []
         
         # Context menu action for plotting
-        self.plot_action = QAction(self.window)
+        self.plot_action = QAction("Plot Expression", self.window)
+        self.plot_action.triggered.connect(self.plot_exp)
         
         # Debounce timer for highlighting to prevent lag while typing
         self.highlight_timer = QTimer(self)
@@ -58,13 +59,13 @@ class Plotter(Plugin):
         
         # Initialize current editor if active
         self.on_editor_changed()
-
+ 
     def check_active_editor(self):
         editor = getattr(self.window, 'current_editor', None)
         if editor and isinstance(editor, QsciScintilla):
             if not hasattr(editor, '_math_highlighter_setup'):
                 self.on_editor_changed()
-
+ 
     def on_editor_changed(self):
         editor = getattr(self.window, 'current_editor', None)
         if not editor or not isinstance(editor, QsciScintilla):
@@ -94,8 +95,11 @@ class Plotter(Plugin):
             pass
         editor.cursorPositionChanged.connect(self.on_cursor_position_changed)
         
-        # Register plot context menu action
-        if hasattr(editor, 'context_menu') and self.plot_action not in editor.context_menu.actions():
+        # Register plot context menu action and clean up duplicates/stale entries
+        if hasattr(editor, 'context_menu'):
+            for act in list(editor.context_menu.actions()):
+                if act.text().startswith("Plot Expression") or act.text().startswith("Plot Equation"):
+                    editor.context_menu.removeAction(act)
             editor.context_menu.addAction(self.plot_action)
             
         editor._math_highlighter_setup = True
