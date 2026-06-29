@@ -6,7 +6,7 @@ from http.server import HTTPServer, SimpleHTTPRequestHandler
 from pathlib import Path
 import re
 
-from PyQt6.QtCore import QFileSystemWatcher, QTimer, Qt
+from PyQt6.QtCore import QFileSystemWatcher, QTimer, Qt, QPoint
 from PyQt6.QtGui import QAction, QColor, QCursor
 from PyQt6.QtWidgets import (
     QPushButton, QMessageBox, QDockWidget, QWidget, 
@@ -30,9 +30,34 @@ MATH_INDICATOR_ID = 12
 __name__ = "Plotter"
 __author__ = "Rohan Kishore"
 
-MATH_EQ_REGEX = re.compile(
-    r'^\s*(?:([a-zA-Z_][a-zA-Z0-9_]*(?:\s*\(\s*[a-zA-Z_][a-zA-Z0-9_]*\s*\))?)\s*=\s*)?([^#\n]+)'
-)
+
+class PlotButton(QPushButton):
+    def __init__(self, parent_editor, eq, plot_callback):
+        super().__init__("Plot", parent_editor)
+        self.eq = eq
+        self.plot_callback = plot_callback
+        self.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.setStyleSheet("""
+            QPushButton {
+                background-color: #89b4fa;
+                color: #11111b;
+                border: 1px solid #74c7ec;
+                border-radius: 4px;
+                padding: 2px 6px;
+                font-weight: bold;
+                font-size: 11px;
+                font-family: 'Segoe UI', Arial, sans-serif;
+            }
+            QPushButton:hover {
+                background-color: #b4befe;
+            }
+        """)
+        self.clicked.connect(self.on_clicked)
+        
+    def on_clicked(self):
+        self.plot_callback(self.eq)
+        self.deleteLater()
+
 
 class Plotter(Plugin):
     def __init__(self, window: Window) -> None:
@@ -41,6 +66,7 @@ class Plotter(Plugin):
         self.window = window
         self.plot_dock = None
         self.detected_equations = []
+        self.plot_button = None
         
         # Context menu action for custom selected text plotting
         self.plot_action = QAction("Plot Expression", self.window)
@@ -91,6 +117,13 @@ class Plotter(Plugin):
             pass
         editor.indicatorClicked.connect(self.on_indicator_clicked)
         
+        # Hide floating button when cursor position changes
+        try:
+            editor.cursorPositionChanged.disconnect(self.hide_floating_button)
+        except:
+            pass
+        editor.cursorPositionChanged.connect(self.hide_floating_button)
+        
         # Register plot context menu action
         if hasattr(editor, 'context_menu') and self.plot_action not in editor.context_menu.actions():
             editor.context_menu.addAction(self.plot_action)
@@ -99,6 +132,7 @@ class Plotter(Plugin):
         self.highlight_math_equations()
 
     def on_text_changed(self):
+        self.hide_floating_button()
         self.highlight_timer.start()
 
     def setup_math_highlighter(self, editor):
@@ -131,6 +165,60 @@ class Plotter(Plugin):
             editor.SendScintilla(QsciScintilla.SCI_SETINDICATORCURRENT, MATH_INDICATOR_ID)
             editor.SendScintilla(QsciScintilla.SCI_INDICATORCLEARRANGE, 0, len(editor.text()))
 
+    def find_math_spans(self, line):
+        spans = []
+        
+        # 1. Match assignments like: y = x**2 + 5, f(x) = sin(x)
+        assignment_pattern = re.compile(
+            r'\b(?:[yzfgh](?:\s*\(\s*[xt]\s*\))?)\s*=\s*(?:[0-9xt\s\+\-\*\/\(\)\^\.\*]|sin|cos|tan|log|exp|sqrt|abs|pi|e)+'
+        )
+        for m in assignment_pattern.finditer(line):
+            expr = m.group(0)
+            if '=' in expr:
+                rhs = expr.split('=', 1)[1].strip()
+                if any(v in rhs for v in ['x', 't', 'theta', 'sin', 'cos', 'tan', 'log', 'exp', 'sqrt', 'abs']) or any(op in rhs for op in ['+', '-', '*', '/', '^']):
+                    spans.append((m.start(), m.end()))
+                
+        # 2. Match standalone function calls like: sin(x), log(x+1)
+        func_pattern = re.compile(
+            r'\b(?:sin|cos|tan|log|log10|exp|sqrt|abs|sinh|cosh|tanh|arcsin|arccos|arctan)\s*\([^)]+\)'
+        )
+        for m in func_pattern.finditer(line):
+            spans.append((m.start(), m.end()))
+            
+        # 3. Match standalone algebraic expressions: e.g. x**2 + 2*x + 1, 5*t - 3
+        alg_pattern = re.compile(
+            r'\b[xt]\s*(?:\*\*|\^|\*|\/|\+|\-)\s*(?:[0-9xt\s\+\-\*\/\(\)\^\.\*])+'
+        )
+        for m in alg_pattern.finditer(line):
+            spans.append((m.start(), m.end()))
+            
+        if not spans:
+            return []
+            
+        # Merge overlapping/adjacent spans
+        spans.sort(key=lambda x: x[0])
+        merged = [spans[0]]
+        for current in spans[1:]:
+            prev = merged[-1]
+            if current[0] <= prev[1] + 1:
+                merged[-1] = (prev[0], max(prev[1], current[1]))
+            else:
+                merged.append(current)
+                
+        # Clean ends
+        cleaned = []
+        for start, end in merged:
+            span_text = line[start:end]
+            stripped = span_text.strip()
+            if not stripped:
+                continue
+            new_start = start + span_text.find(stripped)
+            new_end = new_start + len(stripped)
+            cleaned.append((new_start, new_end))
+            
+        return cleaned
+
     def highlight_math_equations(self):
         editor = self.window.current_editor
         if not editor or not isinstance(editor, QsciScintilla):
@@ -147,68 +235,40 @@ class Plotter(Plugin):
         pos = 0
         for line_idx, line in enumerate(lines):
             clean_line = line
+            comment_start = -1
             if '#' in line:
                 clean_line = line.split('#', 1)[0]
+                comment_start = line.find('#')
                 
-            match = MATH_EQ_REGEX.match(clean_line)
-            if match:
-                lhs = match.group(1) or ""
-                rhs = match.group(2) or ""
-                if self.is_math_expression(lhs, rhs):
-                    start_offset = line.find(match.group(0))
-                    match_len = len(match.group(0).rstrip())
+            spans = self.find_math_spans(clean_line)
+            for start, end in spans:
+                if comment_start != -1 and start >= comment_start:
+                    continue
                     
-                    start_pos = pos + start_offset
-                    length = match_len
+                match_text = line[start:end].strip()
+                if not match_text:
+                    continue
                     
-                    self.detected_equations.append({
-                        "start": start_pos,
-                        "end": start_pos + length,
-                        "line": line_idx,
-                        "lhs": lhs.strip(),
-                        "rhs": rhs.strip(),
-                        "expr": (lhs + " = " + rhs if lhs else rhs).strip()
-                    })
-                    self.apply_highlight(start_pos, length)
+                lhs = ""
+                rhs = match_text
+                if '=' in match_text:
+                    parts = match_text.split('=', 1)
+                    lhs = parts[0].strip()
+                    rhs = parts[1].strip()
+                    
+                start_pos = pos + start
+                length = end - start
+                
+                self.detected_equations.append({
+                    "start": start_pos,
+                    "end": start_pos + length,
+                    "line": line_idx,
+                    "lhs": lhs,
+                    "rhs": rhs,
+                    "expr": match_text
+                })
+                self.apply_highlight(start_pos, length)
             pos += len(line)
-
-    def is_math_expression(self, lhs, rhs):
-        rhs = rhs.strip()
-        lhs = lhs.strip()
-        if not rhs or rhs.startswith('#'):
-            return False
-            
-        if '"' in rhs or "'" in rhs or 'import ' in rhs or 'def ' in rhs or 'class ' in rhs:
-            return False
-            
-        exclude_keywords = {'print', 'return', 'self', 'import', 'from', 'as', 'pass', 'global', 
-                            'nonlocal', 'assert', 'yield', 'del', 'in', 'is', 'not', 'and', 'or', 'None'}
-        
-        words = re.findall(r'[a-zA-Z_][a-zA-Z0-9_]*', rhs)
-        if any(w in exclude_keywords for w in words):
-            return False
-            
-        if lhs and '(' in lhs and ')' in lhs:
-            return True
-            
-        math_funcs = {'sin', 'cos', 'tan', 'exp', 'sqrt', 'log', 'log10', 'abs', 'pi', 'e', 
-                      'sinh', 'cosh', 'tanh', 'arcsin', 'arccos', 'arctan', 'pow', 'ceil', 'floor'}
-        
-        has_math_call = any(func in words for func in math_funcs)
-        has_ind_var = 'x' in words or 't' in words or 'theta' in words
-        has_operators = any(op in rhs for op in ['+', '-', '*', '/', '^', '**'])
-        
-        lhs_words = re.findall(r'[a-zA-Z_][a-zA-Z0-9_]*', lhs)
-        has_math_lhs = any(w in {'y', 'f', 'z', 'r', 'g', 'h'} for w in lhs_words)
-        
-        if has_math_call:
-            return True
-        if has_ind_var and (has_operators or lhs):
-            return True
-        if has_math_lhs and has_operators:
-            return True
-            
-        return False
 
     def on_indicator_clicked(self, line, index, modifiers):
         editor = self.window.current_editor
@@ -223,32 +283,33 @@ class Plotter(Plugin):
                 break
                 
         if clicked_eq:
-            self.show_plot_menu(clicked_eq)
+            self.show_floating_plot_button(editor, pos, clicked_eq)
 
-    def show_plot_menu(self, eq):
-        menu = QMenu(self.window)
-        menu.setStyleSheet("""
-            QMenu {
-                background-color: #1e1e2e;
-                color: #cdd6f4;
-                border: 1px solid #45475a;
-                border-radius: 6px;
-                padding: 4px;
-            }
-            QMenu::item {
-                padding: 6px 20px;
-                border-radius: 4px;
-            }
-            QMenu::item:selected {
-                background-color: #89b4fa;
-                color: #11111b;
-            }
-        """)
+    def show_floating_plot_button(self, editor, pos, eq):
+        self.hide_floating_button()
         
-        plot_action = QAction(f"Plot Equation: {eq['expr']}", self.window)
-        plot_action.triggered.connect(lambda: self.plot_equation(eq))
-        menu.addAction(plot_action)
-        menu.exec(QCursor.pos())
+        self.plot_button = PlotButton(editor, eq, self.plot_equation)
+        
+        # Calculate cursor/click coordinate position
+        point = editor.pointFromPosition(pos)
+        btn_w = 42
+        btn_h = 20
+        x = point.x() - btn_w // 2
+        y = point.y() - btn_h - 4
+        
+        if x < 0: x = 0
+        if y < 0: y = 0
+        
+        self.plot_button.setGeometry(x, y, btn_w, btn_h)
+        self.plot_button.show()
+
+    def hide_floating_button(self):
+        if hasattr(self, 'plot_button') and self.plot_button is not None:
+            try:
+                self.plot_button.deleteLater()
+            except:
+                pass
+            self.plot_button = None
 
     def plot_equation(self, eq):
         if not HAS_PLOT_LIBS:
