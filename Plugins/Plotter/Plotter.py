@@ -39,10 +39,6 @@ class Plotter(Plugin):
         self.plot_dock = None
         self.detected_equations = []
         
-        # Context menu action for plotting
-        self.plot_action = QAction("Plot Expression", self.window)
-        self.plot_action.triggered.connect(self.plot_exp)
-        
         # Debounce timer for highlighting to prevent lag while typing
         self.highlight_timer = QTimer(self)
         self.highlight_timer.setSingleShot(True)
