@@ -68,7 +68,7 @@ class Plotter(Plugin):
         self.detected_equations = []
         self.plot_button = None
         
-        # Context menu action for custom selected text plotting
+        # Context menu action for plotting
         self.plot_action = QAction("Plot Expression", self.window)
         self.plot_action.triggered.connect(self.plot_exp)
         
@@ -117,12 +117,12 @@ class Plotter(Plugin):
             pass
         editor.indicatorClicked.connect(self.on_indicator_clicked)
         
-        # Hide floating button when cursor position changes
+        # Hide floating button and update context menu text when cursor position changes
         try:
-            editor.cursorPositionChanged.disconnect(self.hide_floating_button)
+            editor.cursorPositionChanged.disconnect(self.on_cursor_position_changed)
         except:
             pass
-        editor.cursorPositionChanged.connect(self.hide_floating_button)
+        editor.cursorPositionChanged.connect(self.on_cursor_position_changed)
         
         # Register plot context menu action
         if hasattr(editor, 'context_menu') and self.plot_action not in editor.context_menu.actions():
@@ -134,6 +134,34 @@ class Plotter(Plugin):
     def on_text_changed(self):
         self.hide_floating_button()
         self.highlight_timer.start()
+
+    def on_cursor_position_changed(self):
+        self.hide_floating_button()
+        self.update_context_menu_text()
+
+    def update_context_menu_text(self):
+        editor = getattr(self.window, 'current_editor', None)
+        if not editor or not isinstance(editor, QsciScintilla):
+            return
+            
+        pos = editor.SendScintilla(QsciScintilla.SCI_GETCURRENTPOS)
+        
+        # Check if cursor is on any detected equation
+        on_eq = None
+        for eq in self.detected_equations:
+            if eq["start"] <= pos <= eq["end"]:
+                on_eq = eq
+                break
+                
+        if on_eq:
+            self.plot_action.setText(f"Plot Equation: {on_eq['expr']}")
+        else:
+            selected = editor.selectedText().strip()
+            if selected:
+                display = selected if len(selected) < 20 else selected[:17] + "..."
+                self.plot_action.setText(f"Plot Expression: {display}")
+            else:
+                self.plot_action.setText("Plot Expression")
 
     def setup_math_highlighter(self, editor):
         editor.setIndicatorDrawUnder(True, MATH_INDICATOR_ID)
@@ -337,9 +365,18 @@ class Plotter(Plugin):
             editor = self.window.current_editor
             if not editor:
                 return
+                
             selected_text = editor.selectedText().strip()
+            
+            # If no selection, check if cursor is on any highlighted math equation
             if not selected_text:
-                QMessageBox.information(self.window, "Plotter", "Please select a mathematical expression to plot.")
+                pos = editor.SendScintilla(QsciScintilla.SCI_GETCURRENTPOS)
+                for eq in self.detected_equations:
+                    if eq["start"] <= pos <= eq["end"]:
+                        self.plot_equation(eq)
+                        return
+                
+                QMessageBox.information(self.window, "Plotter", "Please select a mathematical expression to plot or place your cursor on a highlighted equation.")
                 return
             
             lhs = ""
@@ -516,6 +553,14 @@ class PlotDockWidget(QDockWidget):
             'arcsin': np.arcsin,
             'arccos': np.arccos,
             'arctan': np.arctan,
+            'sec': lambda val: 1.0 / np.cos(val),
+            'csc': lambda val: 1.0 / np.sin(val),
+            'cot': lambda val: 1.0 / np.tan(val),
+            'arcsinh': np.arcsinh,
+            'arccosh': np.arccosh,
+            'arctanh': np.arctanh,
+            'ceil': np.ceil,
+            'floor': np.floor,
         }
         
         try:
