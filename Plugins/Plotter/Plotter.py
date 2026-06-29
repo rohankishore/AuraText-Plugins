@@ -319,16 +319,18 @@ class Plotter(Plugin):
         self.plot_button = PlotButton(editor, eq, self.plot_equation)
         
         # Calculate cursor/click coordinate position
-        point = editor.pointFromPosition(pos)
+        x = editor.SendScintilla(QsciScintilla.SCI_POINTXFROMPOSITION, 0, pos)
+        y = editor.SendScintilla(QsciScintilla.SCI_POINTYFROMPOSITION, 0, pos)
+        
         btn_w = 42
         btn_h = 20
-        x = point.x() - btn_w // 2
-        y = point.y() - btn_h - 4
+        button_x = x - btn_w // 2
+        button_y = y - btn_h - 4
         
-        if x < 0: x = 0
-        if y < 0: y = 0
+        if button_x < 0: button_x = 0
+        if button_y < 0: button_y = 0
         
-        self.plot_button.setGeometry(x, y, btn_w, btn_h)
+        self.plot_button.setGeometry(button_x, button_y, btn_w, btn_h)
         self.plot_button.show()
 
     def hide_floating_button(self):
