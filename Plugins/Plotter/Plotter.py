@@ -1,3 +1,4 @@
+from PyQt6.QtWidgets import QMenu
 import os
 import sys
 import threading
