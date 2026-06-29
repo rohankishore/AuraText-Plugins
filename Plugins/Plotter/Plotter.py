@@ -6,7 +6,7 @@ from http.server import HTTPServer, SimpleHTTPRequestHandler
 from pathlib import Path
 import re
 
-from PyQt6.QtCore import QFileSystemWatcher, QTimer, Qt, QPoint
+from PyQt6.QtCore import QFileSystemWatcher, QTimer, Qt
 from PyQt6.QtGui import QAction, QColor, QCursor
 from PyQt6.QtWidgets import (
     QPushButton, QMessageBox, QDockWidget, QWidget, 
@@ -31,34 +31,6 @@ __name__ = "Plotter"
 __author__ = "Rohan Kishore"
 
 
-class PlotButton(QPushButton):
-    def __init__(self, parent_editor, eq, plot_callback):
-        super().__init__("Plot", parent_editor)
-        self.eq = eq
-        self.plot_callback = plot_callback
-        self.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.setStyleSheet("""
-            QPushButton {
-                background-color: #89b4fa;
-                color: #11111b;
-                border: 1px solid #74c7ec;
-                border-radius: 4px;
-                padding: 2px 6px;
-                font-weight: bold;
-                font-size: 11px;
-                font-family: 'Segoe UI', Arial, sans-serif;
-            }
-            QPushButton:hover {
-                background-color: #b4befe;
-            }
-        """)
-        self.clicked.connect(self.on_clicked)
-        
-    def on_clicked(self):
-        self.plot_callback(self.eq)
-        self.deleteLater()
-
-
 class Plotter(Plugin):
     def __init__(self, window: Window) -> None:
         super().__init__(window)
@@ -66,7 +38,6 @@ class Plotter(Plugin):
         self.window = window
         self.plot_dock = None
         self.detected_equations = []
-        self.plot_button = None
         
         # Context menu action for plotting
         self.plot_action = QAction("Plot Expression", self.window)
@@ -117,7 +88,7 @@ class Plotter(Plugin):
             pass
         editor.indicatorClicked.connect(self.on_indicator_clicked)
         
-        # Hide floating button and update context menu text when cursor position changes
+        # Update context menu text when cursor position changes
         try:
             editor.cursorPositionChanged.disconnect(self.on_cursor_position_changed)
         except:
@@ -132,11 +103,9 @@ class Plotter(Plugin):
         self.highlight_math_equations()
 
     def on_text_changed(self):
-        self.hide_floating_button()
         self.highlight_timer.start()
 
     def on_cursor_position_changed(self):
-        self.hide_floating_button()
         self.update_context_menu_text()
 
     def update_context_menu_text(self):
@@ -311,35 +280,32 @@ class Plotter(Plugin):
                 break
                 
         if clicked_eq:
-            self.show_floating_plot_button(editor, pos, clicked_eq)
+            self.show_plot_menu(clicked_eq)
 
-    def show_floating_plot_button(self, editor, pos, eq):
-        self.hide_floating_button()
+    def show_plot_menu(self, eq):
+        menu = QMenu(self.window)
+        menu.setStyleSheet("""
+            QMenu {
+                background-color: #1e1e2e;
+                color: #cdd6f4;
+                border: 1px solid #45475a;
+                border-radius: 6px;
+                padding: 4px;
+            }
+            QMenu::item {
+                padding: 6px 20px;
+                border-radius: 4px;
+            }
+            QMenu::item:selected {
+                background-color: #89b4fa;
+                color: #11111b;
+            }
+        """)
         
-        self.plot_button = PlotButton(editor, eq, self.plot_equation)
-        
-        # Calculate cursor/click coordinate position
-        x = editor.SendScintilla(QsciScintilla.SCI_POINTXFROMPOSITION, 0, pos)
-        y = editor.SendScintilla(QsciScintilla.SCI_POINTYFROMPOSITION, 0, pos)
-        
-        btn_w = 42
-        btn_h = 20
-        button_x = x - btn_w // 2
-        button_y = y - btn_h - 4
-        
-        if button_x < 0: button_x = 0
-        if button_y < 0: button_y = 0
-        
-        self.plot_button.setGeometry(button_x, button_y, btn_w, btn_h)
-        self.plot_button.show()
-
-    def hide_floating_button(self):
-        if hasattr(self, 'plot_button') and self.plot_button is not None:
-            try:
-                self.plot_button.deleteLater()
-            except:
-                pass
-            self.plot_button = None
+        plot_action = QAction(f"Plot Equation: {eq['expr']}", self.window)
+        plot_action.triggered.connect(lambda: self.plot_equation(eq))
+        menu.addAction(plot_action)
+        menu.exec(QCursor.pos())
 
     def plot_equation(self, eq):
         if not HAS_PLOT_LIBS:
