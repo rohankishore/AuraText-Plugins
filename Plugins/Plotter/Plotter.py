@@ -1,4 +1,3 @@
-from PyQt6.QtWidgets import QMenu
 import os
 import sys
 import threading
@@ -9,7 +8,10 @@ import re
 
 from PyQt6.QtCore import QFileSystemWatcher, QTimer, Qt
 from PyQt6.QtGui import QAction, QColor, QCursor
-from PyQt6.QtWidgets import QPushButton, QMessageBox, QDockWidget, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QFileDialog
+from PyQt6.QtWidgets import (
+    QPushButton, QMessageBox, QDockWidget, QWidget, 
+    QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QFileDialog, QMenu
+)
 from PyQt6.Qsci import QsciScintilla
 
 from auratext import Plugin
