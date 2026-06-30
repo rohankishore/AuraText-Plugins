@@ -22,7 +22,8 @@ try:
     from matplotlib.figure import Figure
     import numpy as np
     HAS_PLOT_LIBS = True
-except ImportError:
+except ImportError as e:
+    print(f"WARNING: Error importing modules: {e}")
     HAS_PLOT_LIBS = False
 
 MATH_INDICATOR_ID = 12
