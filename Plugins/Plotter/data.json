@@ -1,1 +1,1 @@
-{"name": "Plotter", "author": "Rohan Kishore", "desc" : "Identifies and plots mathematical equations from the file in the editor"}
+{"name": "Plotter", "author": "Rohan Kishore", "desc" : "Identifies and plots mathematical equations from the file in the editor", "dependencies": ["matplotlib", "numpy"]}
